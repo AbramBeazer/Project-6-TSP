@@ -599,7 +599,7 @@ namespace TSP
                         if (path.Count == this.Cities.Length)
                         {
                             count++;
-                            if (this.bssf is null || cost + costMatrix[currentRow, startIndex] < this.bssf.costOfRoute())
+                            if (this.bssf == null || cost + costMatrix[currentRow, startIndex] < this.bssf.costOfRoute())
                             {
                                 bssf = new TSPSolution(this.PathToRoute(path));
                                 break;
