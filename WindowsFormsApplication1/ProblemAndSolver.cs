@@ -96,6 +96,8 @@ namespace TSP
         /// </summary>
         private TSPSolution bssf;
 
+        private int[,] routeFrequencies;
+
         /// <summary>
         /// how to color various things. 
         /// </summary>
@@ -634,47 +636,106 @@ namespace TSP
             return results;
         }
 
+        public int greedyAntSolution()
+        {
+            routeFrequencies = new int[Cities.Length, Cities.Length];
+            for(int i = 0; i < Cities.Length; i++)
+            {
+                for(int j = 0; j < Cities.Length; j++)
+                {
+                    routeFrequencies[i,j] = 0;
+                }
+            }
+            int count = 0;
+            
+            double[,] costMatrix = this.CalculateCostMatrix();
+            for (int startIndex = 0; startIndex < this.Cities.Length; ++startIndex)
+            {
+                List<int> path = new List<int>();
+                path.Add(startIndex);
+
+                int currentRow = startIndex;
+                double cost = 0;
+                double[,] workingMatrix = GetStartMatrix(costMatrix, startIndex);
+
+                while (this.HasMorePaths(workingMatrix, currentRow))
+                {
+                    int minIndex = this.GetMinIndex(workingMatrix, currentRow);
+                    if (minIndex != -1)
+                    {
+                        routeFrequencies[currentRow, minIndex]++;
+                        path.Add(minIndex);
+                        cost += workingMatrix[currentRow, minIndex];
+                        BlockPaths(workingMatrix, currentRow, minIndex);
+                        currentRow = minIndex;
+                        
+                        if (path.Count == this.Cities.Length)
+                        {
+                            count++;
+                            if (this.bssf == null || cost + costMatrix[currentRow, startIndex] < this.bssf.costOfRoute())
+                            {
+                                bssf = new TSPSolution(this.PathToRoute(path));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+
+        
+
         public string[] fancySolveProblem()
         {
             string[] results = new string[3];
             Stopwatch timer = new Stopwatch();
-            int i, swap, temp, count = 0;
-            int[] perm = new int[Cities.Length];
-            Route = new ArrayList();
-            Random rnd = new Random();
 
             timer.Start();
 
-            const int ITERATIONS = 1000000;
-            for (int iteration = 0; iteration < ITERATIONS; ++iteration)
+            int count = greedyAntSolution();
+
+            for(int start = 0; start < Cities.Length; start++)
             {
-                do
+                double routeCost = 0;
+                ArrayList route = new ArrayList();
+                bool routeFound = false;
+                int from = start;
+                while(!routeFound)
                 {
-                    for (i = 0; i < perm.Length; i++)                                 // create a random permutation template
-                        perm[i] = i;
-                    for (i = 0; i < perm.Length; i++)
+                    int popValue = 0;
+                    int popIndex = -1;
+                    for(int to = 0; to < Cities.Length; to++)
                     {
-                        swap = i;
-                        while (swap == i)
-                            swap = rnd.Next(0, Cities.Length);
-                        temp = perm[i];
-                        perm[i] = perm[swap];
-                        perm[swap] = temp;
+                        if(!(route.Contains(Cities[to])))
+                        {
+                            if(routeFrequencies[from, to] >= popValue)
+                            {
+                                popValue = routeFrequencies[from, to];
+                                popIndex = to;
+                            }
+                        }
                     }
-                    Route.Clear();
-                    for (i = 0; i < Cities.Length; i++)                            // Now build the route using the random permutation 
+                    routeCost += Cities[from].costToGetTo(Cities[popIndex]); 
+                    route.Add(Cities[popIndex]);
+                    from = popIndex;
+                    if(route.Count == Cities.Length)
                     {
-                        Route.Add(Cities[perm[i]]);
+                        routeFound = true;
                     }
-                    
-                    TSPSolution solution = new TSPSolution(Route);
-                    if (solution.costOfRoute() < costOfBssf() || costOfBssf() == -1)
+                }
+                double toStart = Cities[from].costToGetTo(Cities[start]);
+                if(toStart != double.PositiveInfinity)
+                {
+                    routeCost += toStart; 
+                    if(routeCost < costOfBssf())
                     {
-                        bssf = solution;
+                        bssf = new TSPSolution(route);
+                        //break
                     }
-                    count++;
-                } while (costOfBssf() == double.PositiveInfinity);                // until a valid route is found
+                }
             }
+
 
             timer.Stop();
 
