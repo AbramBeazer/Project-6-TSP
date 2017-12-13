@@ -11,6 +11,7 @@ namespace TSP
 
     class ProblemAndSolver
     {
+        double[,] Phermone;
 
         private class TSPSolution
         {
@@ -97,6 +98,7 @@ namespace TSP
         private TSPSolution bssf;
 
         private int[,] routeFrequencies;
+        
 
         /// <summary>
         /// how to color various things. 
@@ -636,6 +638,7 @@ namespace TSP
             return results;
         }
 
+        /*
         public int greedyAntSolution()
         {
             routeFrequencies = new int[Cities.Length, Cities.Length];
@@ -683,7 +686,151 @@ namespace TSP
             }
             return count;
         }
+        */
+        public class Ant
+        {
+            ArrayList route;
+            int currentIndex;
+            bool completeRoute;
+            City[] cities;
+            double[,] pheremones;
+            double[,] distances;
+            double alpha;
+            double beta;
 
+            public Ant(City[] towns, double[,] phs, double[,] distance)
+            {
+                route = new ArrayList();
+                currentIndex = 0;
+                completeRoute = false;
+                cities = towns;
+                pheremones = phs;
+                distances = distance;
+                //set alpha and beta to something
+            }
+
+            public bool isCompleteRoute()
+            {
+                return completeRoute;
+            }
+
+            public ArrayList getRoute()
+            {
+                return route;
+            }
+
+            public double getCost()
+            {
+                double val = 0;
+                for(int i = 1; i < route.Count; i++)
+                {
+                    val += cities[i - 1].costToGetTo(cities[i]);
+                }
+                double fullroute = cities[cities.Length].costToGetTo(cities[0]);
+                if(fullroute != double.PositiveInfinity)
+                {
+                    val += fullroute;
+                    return val;
+                }
+                return double.PositiveInfinity;
+            }
+
+            public void clear()
+            {
+                route = new ArrayList();
+                //pick new starting index
+                currentIndex = 0;
+            }
+
+            public void travelNext()
+            {
+                if (completeRoute)
+                {
+                    return;
+                }
+                if(route.Count == cities.Length)
+                {
+                    double cost = getCost();
+                    if(cost != double.PositiveInfinity)
+                    {
+                        completeRoute = true;
+                    }
+                    else
+                    {
+                        clear();
+                    }
+                }
+                int edge = nextCity();
+                route.Add(cities[edge]);
+                currentIndex = edge;
+            }
+
+            public int nextCity()
+            {
+                double[] probs = getProbabilites();
+                double r = new Random().NextDouble();
+                for(int i = 0; i < cities.Length; i++)
+                {
+                    if (!(route.Contains(cities[i])))
+                    {
+                        if(r <= probs[i])
+                        {
+                            return i;
+                        }
+                    }
+                }
+                return -1;
+            }
+
+            public double[] getProbabilites()
+            {
+                double denom = getDenominator();
+                double[] probs = new double[cities.Length];
+                for(int i = 0; i < cities.Length; i++)
+                {
+                    if(!(distances[currentIndex,i] == double.PositiveInfinity))
+                    {
+                        if (!(route.Contains(cities[i])))
+                        {
+                            if(probs.Length == 0)
+                            {
+                                probs[i] = (getDesireability(currentIndex, i) / denom);
+                            }
+                            else
+                            {
+                                probs[i] = probs[i - 1] + getDesireability(currentIndex, i) / denom;
+                            }
+                        }
+                    }
+                }
+                return probs;
+            }
+
+            public double getDenominator()
+            {
+                double denom = 0;
+                for (int i = 0; i < cities.Length; i++)
+                {
+                    if (route.Contains(cities[i]) || distances[currentIndex, i] == double.PositiveInfinity)
+                    {
+                        //do nothing
+                    }
+                    else
+                    {
+                        denom += getDesireability(currentIndex, i);
+                    }
+                }
+                return denom;
+            }
+
+            public double getDesireability(int from, int to)
+            {
+                double phermone = Math.Pow(pheremones[from, to], alpha);
+                double dis = Math.Pow((1 / distances[from, to]), beta);
+                return phermone * dis;
+            }
+
+        }
         
 
         public string[] fancySolveProblem()
@@ -693,49 +840,42 @@ namespace TSP
 
             timer.Start();
 
-            int count = greedyAntSolution();
-
-            for(int start = 0; start < Cities.Length; start++)
+            double[,] costMatrix = CalculateCostMatrix();
+            double[,] phermones = new double[Cities.Length, Cities.Length];
+            for(int i = 0; i < Cities.Length; ++i)
             {
-                double routeCost = 0;
-                ArrayList route = new ArrayList();
-                bool routeFound = false;
-                int from = start;
-                while(!routeFound)
+                for(int j = 0; j < Cities.Length; ++j)
                 {
-                    int popValue = 0;
-                    int popIndex = -1;
-                    for(int to = 0; to < Cities.Length; to++)
-                    {
-                        if(!(route.Contains(Cities[to])))
-                        {
-                            if(routeFrequencies[from, to] >= popValue)
-                            {
-                                popValue = routeFrequencies[from, to];
-                                popIndex = to;
-                            }
-                        }
-                    }
-                    routeCost += Cities[from].costToGetTo(Cities[popIndex]); 
-                    route.Add(Cities[popIndex]);
-                    from = popIndex;
-                    if(route.Count == Cities.Length)
-                    {
-                        routeFound = true;
-                    }
-                }
-                double toStart = Cities[from].costToGetTo(Cities[start]);
-                if(toStart != double.PositiveInfinity)
-                {
-                    routeCost += toStart; 
-                    if(routeCost < costOfBssf())
-                    {
-                        bssf = new TSPSolution(route);
-                        //break
-                    }
+                    phermones[i,j] = 0;
                 }
             }
+            Ant[] colony = new Ant[200];
+            for(int i = 0; i < 200; i++)
+            {
+                colony[i] = new Ant(Cities, phermones, costMatrix);
+            }
+            for(int i = 0; i < colony.Length; i++)
+            {
+                Ant bestAnt = null;
+                double bestcost = 0;
+                while (!(colony[i].isCompleteRoute()))
+                {
+                    colony[i].travelNext();
+                }
+                if(bestAnt == null)
+                {
+                    bestAnt = colony[i];
+                    bestcost = colony[i].getCost();
+                }
+                else if(colony[i].getCost() < bestcost)
+                {
+                    bestAnt = colony[i];
+                    bestcost = colony[i].getCost();
+                }
 
+                //somehow update the phermone levels
+            }
+            //calulate real path using edges with the strongest phermone
 
             timer.Stop();
 
