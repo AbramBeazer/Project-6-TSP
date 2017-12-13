@@ -694,7 +694,7 @@ namespace TSP
             timer.Start();
 
             int count = greedyAntSolution();
-
+            double bestCost = costOfBssf();
             for(int start = 0; start < Cities.Length; start++)
             {
                 double routeCost = 0;
@@ -726,12 +726,20 @@ namespace TSP
                     if (shortestValue * 1.5 < Cities[from].costToGetTo(Cities[popIndex]))
                     {
                         routeCost += Cities[from].costToGetTo(Cities[shortestIndex]);
+                        if(routeCost > bestCost)
+                        {
+                            break;
+                        }
                         route.Add(Cities[shortestIndex]);
                         from = shortestIndex;
                     }
                     else
                     {
                         routeCost += Cities[from].costToGetTo(Cities[popIndex]);
+                        if (routeCost > bestCost)
+                        {
+                            break;
+                        }
                         route.Add(Cities[popIndex]);
                         from = popIndex;
                     }
@@ -744,9 +752,10 @@ namespace TSP
                 if(toStart != double.PositiveInfinity)
                 {
                     routeCost += toStart; 
-                    if(routeCost < costOfBssf())
+                    if(routeCost < bestCost)
                     {
                         bssf = new TSPSolution(route);
+                        bestCost = costOfBssf();
                         //break
                     }
                 }
