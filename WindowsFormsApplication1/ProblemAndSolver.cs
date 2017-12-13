@@ -748,16 +748,12 @@ namespace TSP
                         routeFound = true;
                     }
                 }
-                double toStart = Cities[from].costToGetTo(Cities[start]);
-                if(toStart != double.PositiveInfinity)
+
+                routeCost += Cities[from].costToGetTo(Cities[start]);
+                if (routeCost < bestCost)
                 {
-                    routeCost += toStart; 
-                    if(routeCost < bestCost)
-                    {
-                        bssf = new TSPSolution(route);
-                        bestCost = costOfBssf();
-                        //break
-                    }
+                    bssf = new TSPSolution(route);
+                    bestCost = costOfBssf();
                 }
             }
 
