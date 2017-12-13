@@ -638,6 +638,7 @@ namespace TSP
 
         public int greedyAntSolution()
         {
+            //sets up the matrix that will keep track of the frequency of each used edge.
             routeFrequencies = new int[Cities.Length, Cities.Length];
             for(int i = 0; i < Cities.Length; i++)
             {
@@ -647,7 +648,7 @@ namespace TSP
                 }
             }
             int count = 0;
-            
+            //run the greedy solution expected
             double[,] costMatrix = this.CalculateCostMatrix();
             for (int startIndex = 0; startIndex < this.Cities.Length; ++startIndex)
             {
@@ -663,6 +664,7 @@ namespace TSP
                     int minIndex = this.GetMinIndex(workingMatrix, currentRow);
                     if (minIndex != -1)
                     {
+                        //when a path is traveled (or an edge chosen) make it in the matrix 
                         routeFrequencies[currentRow, minIndex]++;
                         path.Add(minIndex);
                         cost += workingMatrix[currentRow, minIndex];
@@ -692,30 +694,41 @@ namespace TSP
             Stopwatch timer = new Stopwatch();
 
             timer.Start();
-
+            //call the greedy solution that keeps track of edge use
             int count = greedyAntSolution();
             double bestCost = costOfBssf();
+            //tries to find a route starting at every posible city
             for(int start = 0; start < Cities.Length; start++)
             {
+                //variables to keep track of routes and costs
                 double routeCost = 0;
                 ArrayList route = new ArrayList();
+                //I think we forgot this... hopefully it doesn't break anything
+                route.Add(Cities[start]);
+                //---------------
                 bool routeFound = false;
+                //sets a new start variable
                 int from = start;
                 while(!routeFound)
                 {
+                    //variables to keep track of indexes and values
                     int popValue = 0;
                     int popIndex = -1;
                     double shortestValue = double.PositiveInfinity;
                     int shortestIndex = -1;
+                    //check nodes to choose the next city to visit
                     for(int to = 0; to < Cities.Length; to++)
                     {
+                        //don't check Cities that have already been visited
                         if(!(route.Contains(Cities[to])))
                         {
+                            //check if its is the shortest distance
                             if(Cities[from].costToGetTo(Cities[to]) < shortestValue)
                             {
                                 shortestValue = Cities[from].costToGetTo(Cities[to]);
                                 shortestIndex = to;
                             }
+                            //check if it is the most popular route
                             if(routeFrequencies[from, to] >= popValue)
                             {
                                 popValue = routeFrequencies[from, to];
@@ -723,9 +736,11 @@ namespace TSP
                             }
                         }
                     }
+                    //judge which path to take (shortest distance or most popular)
                     if (shortestValue * 1.5 < Cities[from].costToGetTo(Cities[popIndex]))
                     {
                         routeCost += Cities[from].costToGetTo(Cities[shortestIndex]);
+                        //prune it if the cost is already greater than the best solution
                         if(routeCost > bestCost)
                         {
                             break;
@@ -736,6 +751,7 @@ namespace TSP
                     else
                     {
                         routeCost += Cities[from].costToGetTo(Cities[popIndex]);
+                        //prune it if the cost is already greater than the best solution
                         if (routeCost > bestCost)
                         {
                             break;
@@ -743,23 +759,24 @@ namespace TSP
                         route.Add(Cities[popIndex]);
                         from = popIndex;
                     }
+                    //check if we have a full path. 
                     if (route.Count == Cities.Length)
                     {
                         routeFound = true;
                     }
                 }
-
+                //find the cost back to the first node
                 routeCost += Cities[from].costToGetTo(Cities[start]);
                 if (routeCost < bestCost)
                 {
+                    //set a new solution if it is better
                     bssf = new TSPSolution(route);
                     bestCost = costOfBssf();
                 }
             }
-
-
+            //stop the timer
             timer.Stop();
-
+            //report the results
             results[COST] = costOfBssf().ToString();                          // load results array
             results[TIME] = timer.Elapsed.ToString();
             results[COUNT] = count.ToString();
