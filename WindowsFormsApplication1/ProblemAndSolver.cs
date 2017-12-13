@@ -705,10 +705,17 @@ namespace TSP
                 {
                     int popValue = 0;
                     int popIndex = -1;
+                    double shortestValue = double.PositiveInfinity;
+                    int shortestIndex = -1;
                     for(int to = 0; to < Cities.Length; to++)
                     {
                         if(!(route.Contains(Cities[to])))
                         {
+                            if(Cities[from].costToGetTo(Cities[to]) < shortestValue)
+                            {
+                                shortestValue = Cities[from].costToGetTo(Cities[to]);
+                                shortestIndex = to;
+                            }
                             if(routeFrequencies[from, to] >= popValue)
                             {
                                 popValue = routeFrequencies[from, to];
@@ -716,10 +723,19 @@ namespace TSP
                             }
                         }
                     }
-                    routeCost += Cities[from].costToGetTo(Cities[popIndex]); 
-                    route.Add(Cities[popIndex]);
-                    from = popIndex;
-                    if(route.Count == Cities.Length)
+                    if (shortestValue * 1.5 < Cities[from].costToGetTo(Cities[popIndex]))
+                    {
+                        routeCost += Cities[from].costToGetTo(Cities[shortestIndex]);
+                        route.Add(Cities[shortestIndex]);
+                        from = shortestIndex;
+                    }
+                    else
+                    {
+                        routeCost += Cities[from].costToGetTo(Cities[popIndex]);
+                        route.Add(Cities[popIndex]);
+                        from = popIndex;
+                    }
+                    if (route.Count == Cities.Length)
                     {
                         routeFound = true;
                     }
